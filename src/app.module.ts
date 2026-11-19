@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module
     }),
     AuthModule,
     ExchangeRateModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
