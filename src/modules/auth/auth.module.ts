@@ -8,7 +8,14 @@ import { RegisterUserUseCase } from './application/register-user.use-case';
 import { PasswordHasher } from './domain/ports/password-hasher';
 import { TokenIssuer } from './domain/ports/token-issuer';
 import { UserRepository } from './domain/ports/user.repository';
-import { PASSWORD_HASHER, TOKEN_ISSUER, USER_REPOSITORY } from './auth.tokens';
+import {
+  LOGIN_ATTEMPT_LIMITER,
+  PASSWORD_HASHER,
+  TOKEN_ISSUER,
+  USER_REPOSITORY,
+} from './auth.tokens';
+import { LoginAttemptLimiter } from './domain/ports/login-attempt-limiter';
+import { InMemoryLoginAttemptLimiter } from './infrastructure/security/in-memory-login-attempt-limiter';
 import { BcryptPasswordHasher } from './infrastructure/crypto/bcrypt-password-hasher';
 import { JwtTokenIssuer } from './infrastructure/crypto/jwt-token-issuer';
 import { AuthController } from './infrastructure/http/auth.controller';
@@ -21,6 +28,8 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './infrastructure/security/jwt.strategy';
 
 const USER_MODEL_NAME = 'User';
+const DEFAULT_LOGIN_MAX_FAILURES = 5;
+const DEFAULT_LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
 @Module({
   imports: [
@@ -60,13 +69,28 @@ const USER_MODEL_NAME = 'User';
         new RegisterUserUseCase(users, hasher),
     },
     {
+      provide: LOGIN_ATTEMPT_LIMITER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        new InMemoryLoginAttemptLimiter(
+          Number(config.get('LOGIN_MAX_FAILURES', DEFAULT_LOGIN_MAX_FAILURES)),
+          Number(config.get('LOGIN_WINDOW_MS', DEFAULT_LOGIN_WINDOW_MS)),
+        ),
+    },
+    {
       provide: LoginUseCase,
-      inject: [USER_REPOSITORY, PASSWORD_HASHER, TOKEN_ISSUER],
+      inject: [
+        USER_REPOSITORY,
+        PASSWORD_HASHER,
+        TOKEN_ISSUER,
+        LOGIN_ATTEMPT_LIMITER,
+      ],
       useFactory: (
         users: UserRepository,
         hasher: PasswordHasher,
         tokens: TokenIssuer,
-      ) => new LoginUseCase(users, hasher, tokens),
+        limiter: LoginAttemptLimiter,
+      ) => new LoginUseCase(users, hasher, tokens, limiter),
     },
     JwtStrategy,
   ],

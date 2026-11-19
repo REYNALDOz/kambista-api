@@ -1,3 +1,4 @@
+import { LoginAttemptLimiter } from '../../domain/ports/login-attempt-limiter';
 import { PasswordHasher } from '../../domain/ports/password-hasher';
 import { TokenIssuer, TokenPayload } from '../../domain/ports/token-issuer';
 import { UserRepository } from '../../domain/ports/user.repository';
@@ -44,5 +45,20 @@ export class FakeTokenIssuer implements TokenIssuer {
   issue(payload: TokenPayload): Promise<string> {
     this.issued.push(payload);
     return Promise.resolve(`token-for-${payload.sub}`);
+  }
+}
+
+/** A limiter that never blocks, for tests that are not about limiting. */
+export class NeverBlockingLimiter implements LoginAttemptLimiter {
+  isBlocked(): Promise<boolean> {
+    return Promise.resolve(false);
+  }
+
+  recordFailure(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  reset(): Promise<void> {
+    return Promise.resolve();
   }
 }

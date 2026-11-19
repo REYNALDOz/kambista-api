@@ -16,6 +16,12 @@ export class InvalidCredentialsError extends Error {
     this.name = 'InvalidCredentialsError';
   }
 }
+export class TooManyLoginAttemptsError extends Error {
+  constructor() {
+    super('Too many failed login attempts. Try again later.');
+    this.name = 'TooManyLoginAttemptsError';
+  }
+}
 export class EmailAlreadyRegisteredError extends Error {
   constructor() {
     super('Email is already registered');

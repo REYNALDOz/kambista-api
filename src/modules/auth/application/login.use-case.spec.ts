@@ -5,6 +5,7 @@ import {
   FakePasswordHasher,
   FakeTokenIssuer,
   InMemoryUserRepository,
+  NeverBlockingLimiter,
 } from './testing/fakes';
 
 describe('LoginUseCase', () => {
@@ -15,7 +16,12 @@ describe('LoginUseCase', () => {
     const users = new InMemoryUserRepository();
     const hasher = new FakePasswordHasher();
     tokens = new FakeTokenIssuer();
-    useCase = new LoginUseCase(users, hasher, tokens);
+    useCase = new LoginUseCase(
+      users,
+      hasher,
+      tokens,
+      new NeverBlockingLimiter(),
+    );
 
     await new RegisterUserUseCase(users, hasher).execute({
       name: 'Juan Pérez',

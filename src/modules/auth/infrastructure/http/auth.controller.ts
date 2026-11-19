@@ -4,8 +4,11 @@ import {
   Get,
   HttpCode,
   Post,
+  Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -14,8 +17,10 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { RequestLogInterceptor } from '../../../../shared/request-log.interceptor';
 import { RegisterUserUseCase } from '../../application/register-user.use-case';
 import { LoginUseCase } from '../../application/login.use-case';
 import { LoginResponse, UserResponse } from './dto/auth.responses';
@@ -56,14 +61,19 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
+  @UseInterceptors(RequestLogInterceptor)
   @ApiOperation({ summary: 'Log in and get an access token' })
   @ApiOkResponse({ type: LoginResponse })
   @ApiBadRequestResponse({ description: 'Missing or unknown fields' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
+  @ApiTooManyRequestsResponse({
+    description: 'Too many failed attempts for this email and address',
+  })
+  async login(@Body() dto: LoginDto, @Req() req: Request) {
     const { accessToken, user } = await this.loginUser.execute({
       email: dto.email,
       password: dto.password,
+      address: req.ip,
     });
     return {
       access_token: accessToken,

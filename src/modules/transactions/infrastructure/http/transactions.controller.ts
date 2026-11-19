@@ -6,6 +6,7 @@ import {
   Query,
   Res,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -22,6 +23,7 @@ import { CurrentUser } from '../../../auth/infrastructure/security/current-user.
 import { JwtAuthGuard } from '../../../auth/infrastructure/security/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../../auth/infrastructure/security/authenticated-user';
 import { CreateTransactionUseCase } from '../../application/create-transaction.use-case';
+import { RequestLogInterceptor } from '../../../../shared/request-log.interceptor';
 import {
   DEFAULT_LIMIT,
   GetHistoryUseCase,
@@ -37,6 +39,7 @@ import {
 @ApiBearerAuth()
 @ApiUnauthorizedResponse({ description: 'Missing, invalid or expired token' })
 @UseGuards(JwtAuthGuard)
+@UseInterceptors(RequestLogInterceptor)
 @Controller('transactions')
 export class TransactionsController {
   constructor(
