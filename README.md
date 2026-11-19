@@ -1,78 +1,78 @@
 # Kambista FX API
 
-A currency exchange API with JWT authentication and roles, built with **NestJS**, **TypeScript** and **MongoDB**, following Clean Architecture and DDD.
+API de cambio de dólares y soles con login JWT y roles. Hecha con **NestJS**, **TypeScript** y **MongoDB**, con arquitectura hexagonal (Clean Architecture).
 
-Users register, log in and exchange dollars and soles using the latest SUNAT exchange rate, which the API fetches and stores every 30 seconds. A user sees their own history; an admin can see the history of any user.
+Cada 30 segundos la API trae el tipo de cambio de SUNAT y lo guarda. Un usuario se registra, inicia sesión, cambia dinero y ve su historial. Un admin puede ver el historial de cualquier usuario.
 
-The web app lives in a separate repository: `kambista-frontend`.
+El frontend está en otro repositorio: `kambista-frontend`.
 
-## Features
+## Qué incluye
 
-- Register and log in with JWT. Roles: `user` (default) and `admin`.
-- SUNAT exchange rate fetched every 30 seconds and saved. If the provider fails, the error is logged and the last saved rate keeps serving.
-- Create an exchange: USD to PEN multiplies by the sell rate, PEN to USD divides by the buy rate.
-- History by date range. A user sees only their own; an admin can ask for any user.
-- Validation with specific, descriptive errors. Swagger documentation.
+- Registro y login con JWT. Roles: `user` (por defecto) y `admin`.
+- Tipo de cambio de SUNAT cada 30 s. Si SUNAT falla, se registra el error y se sigue usando la última tasa guardada.
+- Cambio de moneda: USD → PEN multiplica por la tasa de venta; PEN → USD divide por la tasa de compra.
+- Historial por rango de fechas, **paginado**.
+- Errores claros con nombre propio y documentación en Swagger.
+- **Extras:** paginación, caché del tipo de cambio, límite de intentos de login, logs en JSON, tests E2E.
 
-## Prerequisites
+## Requisitos
 
-- Node.js 24 and pnpm 11 (the versions it was developed with)
-- Docker, to run MongoDB
+- Node.js 24 y pnpm 11
+- Docker (para MongoDB)
 
-## Getting started
+## Cómo correrlo
 
 ```bash
 pnpm install
-cp .env.example .env        # then set JWT_SECRET to a long random value
-docker compose up -d        # starts MongoDB
+cp .env.example .env        # y poné un JWT_SECRET largo y aleatorio
+docker compose up -d        # levanta MongoDB
 pnpm start:dev              # http://localhost:3000
 ```
 
-The interactive documentation is at **http://localhost:3000/docs** (use the *Authorize* button to paste a token).
+Documentación interactiva: **http://localhost:3000/docs** (con el botón *Authorize* pegás tu token).
 
-### Environment variables
+### Variables de entorno
 
-Copy `.env.example`; every variable is explained there.
+Copiá `.env.example`; ahí está todo explicado. Las principales:
 
-| Variable | Required | Description |
+| Variable | Obligatoria | Para qué sirve |
 | --- | --- | --- |
-| `MONGODB_URI` | yes | MongoDB connection string, including the database name |
-| `JWT_SECRET` | yes | Secret used to sign tokens (at least 16 characters) |
-| `JWT_EXPIRES_IN` | yes | Token lifetime, for example `15m` or `1h` |
-| `EXCHANGE_RATE_API_URL` | yes | SUNAT exchange rate provider |
-| `EXCHANGE_RATE_REFRESH_MS` | no | How often the rate is fetched (default `30000`) |
-| `EXCHANGE_RATE_TIMEOUT_MS` | no | Timeout of each fetch (default `5000`) |
-| `EXCHANGE_RATE_SYNC_ENABLED` | no | `false` turns the periodic fetch off |
-| `CORS_ORIGIN` | no | Web app origin (default `http://localhost:5173`). Several can be separated by commas. A trailing slash or spaces are tolerated, and an empty value means the default |
-| `EXCHANGE_RATE_CACHE_TTL_MS` | no | How long the latest rate is kept in memory (default `60000`). `0` turns the cache off |
-| `LOGIN_MAX_FAILURES` | no | Failed logins allowed per email and address before blocking (default `5`) |
-| `LOGIN_WINDOW_MS` | no | Length of that window, in milliseconds (default `900000`, 15 minutes) |
-| `PORT` | no | HTTP port (default `3000`) |
+| `MONGODB_URI` | sí | Conexión a MongoDB, con el nombre de la base |
+| `JWT_SECRET` | sí | Clave para firmar tokens (mínimo 16 caracteres) |
+| `JWT_EXPIRES_IN` | sí | Duración del token, por ejemplo `15m` |
+| `EXCHANGE_RATE_API_URL` | sí | Proveedor del tipo de cambio de SUNAT |
+| `CORS_ORIGIN` | no | Origen del frontend (por defecto `http://localhost:5173`). Se pueden poner varios separados por coma |
+| `EXCHANGE_RATE_CACHE_TTL_MS` | no | Cuánto se guarda la tasa en memoria (por defecto `60000`; `0` apaga el caché) |
+| `LOGIN_MAX_FAILURES` | no | Intentos fallidos de login antes de bloquear (por defecto `5`) |
+| `LOGIN_WINDOW_MS` | no | Ventana de esos intentos (por defecto 15 minutos) |
+| `PORT` | no | Puerto HTTP (por defecto `3000`) |
 
-The API refuses to start, with a clear message, if a required variable is missing or invalid.
+También hay `EXCHANGE_RATE_REFRESH_MS`, `EXCHANGE_RATE_TIMEOUT_MS` y `EXCHANGE_RATE_SYNC_ENABLED` (ver `.env.example`).
+Si falta una variable obligatoria o es inválida, la API no arranca y dice cuál es.
 
-### Making a user an admin
+### Cómo volver admin a un usuario
 
-The `admin` role is managed directly in the database:
+El rol `admin` se asigna directo en la base:
 
 ```bash
 docker exec -it kambista-mongo mongosh -u <MONGO_ROOT_USER> -p <MONGO_ROOT_PASSWORD> --authenticationDatabase admin
 > use kambista
 > db.users.updateOne({ email: "juan@example.com" }, { $set: { role: "admin" } })
 ```
-Then log in again: the role travels inside the token.
+
+Después, ese usuario tiene que **volver a iniciar sesión**: el rol viaja dentro del token.
 
 ## API
 
-All routes are under `/v1`. Everything except register and login needs `Authorization: Bearer <token>`.
+Todas las rutas empiezan con `/v1`. Menos registro y login, todas piden `Authorization: Bearer <token>`.
 
-| Method | Route | Description |
+| Método | Ruta | Qué hace |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Register a user (role `user`) |
-| `POST` | `/auth/login` | Returns `access_token` and `usuario` |
-| `GET` | `/auth/me` | Identity and role stored in the token |
-| `POST` | `/transactions` | Create an exchange with the latest rate |
-| `GET` | `/transactions/history` | `startDate`, `endDate` and, for admins, `userId` |
+| `POST` | `/auth/register` | Registra un usuario (rol `user`) |
+| `POST` | `/auth/login` | Devuelve `access_token` y `usuario` |
+| `GET` | `/auth/me` | Identidad y rol del token |
+| `POST` | `/transactions` | Crea un cambio con la última tasa |
+| `GET` | `/transactions/history` | `startDate`, `endDate`, `page`, `limit` y, solo admin, `userId` |
 
 ```bash
 curl -X POST localhost:3000/v1/auth/register -H 'Content-Type: application/json' \
@@ -83,57 +83,61 @@ curl -X POST localhost:3000/v1/transactions -H 'Content-Type: application/json' 
   -d '{"monedaOrigen":"USD","monedaDestino":"PEN","monto":100}'
 ```
 
-Errors use specific names, for example `EmailAlreadyRegisteredError` (409), `InvalidCredentialsError` (401), `SameCurrencyError` (400) or `ExchangeRateNotAvailableError` (503, no rate saved yet).
+Los errores tienen nombre propio, por ejemplo `EmailAlreadyRegisteredError` (409), `InvalidCredentialsError` (401), `TooManyLoginAttemptsError` (429), `SameCurrencyError` (400) o `ExchangeRateNotAvailableError` (503, todavía no hay tasa guardada).
 
-## Running the tests
+## Tests
 
 ```bash
-pnpm test        # unit tests, no database needed
-pnpm test:e2e    # register -> login -> exchange -> history; needs MongoDB running
-pnpm test:cov    # unit tests with coverage
+pnpm test        # tests unitarios, no necesitan base de datos
+pnpm test:e2e    # registro -> login -> cambio -> historial; necesita MongoDB corriendo
+pnpm test:cov    # unitarios con cobertura
 ```
 
-The e2e tests use their own throwaway database (`kambista_e2e`, dropped at the end) and a fixed exchange rate, so they never touch your data nor call SUNAT.
+Los E2E usan su propia base descartable (`kambista_e2e`, se borra al final) y una tasa fija: nunca tocan tus datos ni llaman a SUNAT.
 
-Other scripts: `pnpm build`, `pnpm lint`, `pnpm format`.
+Otros scripts: `pnpm build`, `pnpm lint`, `pnpm format`.
 
-## Project structure
+## Estructura
 
 ```
 src/
   modules/
-    auth/            users, register, login, JWT guard and roles
-    exchange-rate/   fetch and save the SUNAT rate
-    transactions/    exchange requests and history
-      domain/          entities, value objects, errors and ports (interfaces)
-      application/     use cases
-      infrastructure/  HTTP, MongoDB, bcrypt, JWT, SUNAT client
-  config/            startup validation of the environment
-  shared/            domain error to HTTP status mapping
-test/                end-to-end tests
+    auth/            usuarios, registro, login, JWT y roles
+    exchange-rate/   traer y guardar la tasa de SUNAT
+    transactions/    cambios e historial
+      domain/          entidades, errores y puertos (interfaces)
+      application/     casos de uso
+      infrastructure/  HTTP, MongoDB, bcrypt, JWT, cliente SUNAT
+  config/            validación del entorno al arrancar
+  shared/            errores de dominio a HTTP y logs por petición
+test/                tests end-to-end
 ```
 
-## Architecture decisions
+## Decisiones de diseño
 
-- **Paginated history.** `page` and `limit` (default 50, maximum 100) go in the query, the body stays a plain array as the challenge defines, and the total comes in the `X-Total-Count`, `X-Page` and `X-Limit` headers (exposed through CORS).
-- **Exchange rate cache.** A decorator over the repository (same port) keeps the latest rate in memory. It is refreshed when the scheduler saves a rate and expires after a TTL, so a rate saved by another instance is still picked up. An empty result is never cached.
-- **Structured logging, on the endpoints that matter.** Login and the transactions endpoints write one JSON line per request to stdout (method, path, final status, duration in ms and user id), with a `severity` field that Google Cloud Logging understands. It goes to stdout, not to a file, because Docker, Dokploy and Cloud Run collect it from there. The body, the query and the headers are never logged. To log another endpoint, add `@UseInterceptors(RequestLogInterceptor)`.
-- **Login rate limiting.** After 5 failed attempts for the same email and address in 15 minutes, login answers `429` before doing any bcrypt work, even with the right password. A successful login clears the counter. The counter lives in memory (one instance); the port allows a shared store such as Redis.
+**Arquitectura**
+- **Tres capas, las dependencias apuntan hacia adentro.** `domain` no conoce Nest ni MongoDB. `application` define lo que necesita como puertos y `infrastructure` los implementa. Cambiar bcrypt, MongoDB o SUNAT es tocar un solo adaptador.
+- **Los casos de uso no llevan decoradores de Nest.** Cada módulo conecta puertos y adaptadores en un solo lugar (`*.module.ts`).
+- **Las reglas están en el dominio.** Por ejemplo, rechazar monedas iguales o montos menores o iguales a cero. Así se prueban sin HTTP.
 
-- **Three layers, dependencies point inwards.** `domain` knows nothing about Nest or MongoDB. `application` defines what it needs as ports (`UserRepository`, `PasswordHasher`, `ExchangeRateProvider`...) and `infrastructure` implements them. Controllers and MongoDB are both adapters, so they live together.
-- **Use cases have no Nest decorators.** Each module wires ports to adapters in one place (`*.module.ts`), so swapping bcrypt, MongoDB or SUNAT means touching one adapter.
-- **Money uses `Decimal`, not `number`.** `100 * 3.739` is `373.90000000000003` in JavaScript. Amounts are stored as `Decimal128` and rounded to 2 decimals.
-- **Rules live in the domain.** `Transaction.create` rejects equal currencies and amounts that are not greater than zero, and picks sell or buy. "A user only sees their own history" is in the use case, so it is tested without HTTP.
-- **The owner of a transaction comes from the token**, never from the request body.
-- **Login does not reveal which emails exist.** An unknown email and a wrong password give the same error, and both do the same bcrypt work so they take the same time.
-- **A unique index on `email`** is the final guarantee against two simultaneous registrations; the use case only checks it to give a friendly error.
-- **The scheduler never crashes the API.** A provider failure is logged and the last saved rate keeps being used. Fetches never overlap.
-- **Dates are handled in UTC.** An `endDate` without time includes that whole day.
-- **The role travels inside the token.** If an admin is demoted, their token keeps working until it expires, which is why the lifetime is short.
+**Dinero y datos**
+- **El dinero usa `Decimal`, no `number`**: en JavaScript `100 * 3.739` da `373.90000000000003`. Se guarda como `Decimal128` y se redondea a 2 decimales.
+- **Un índice único en `email`** evita dos registros simultáneos con el mismo correo.
+- **Las fechas van en UTC.** Un `endDate` sin hora incluye todo ese día.
 
-## Not implemented yet
+**Seguridad**
+- **El dueño de la operación sale del token**, nunca del body.
+- **El login no revela qué correos existen.** Correo desconocido y contraseña incorrecta dan el mismo error y tardan lo mismo.
+- **Límite de intentos:** tras 5 fallos del mismo correo y dirección en 15 minutos, el login responde `429` aunque la contraseña sea correcta. Un login exitoso borra el contador. Vive en memoria (una sola instancia); con varias instancias haría falta un almacén compartido como Redis.
+- **El rol viaja en el token.** Si bajan a un admin, su token sigue valiendo hasta que venza; por eso dura poco.
 
-Extras from the challenge that this repository does not have, and what I would do:
+**Extras**
+- **Historial paginado.** `page` y `limit` (por defecto 50, máximo 100) van en la query. El body sigue siendo un arreglo simple, como pide el enunciado, y el total viaja en los headers `X-Total-Count`, `X-Page` y `X-Limit`.
+- **Caché del tipo de cambio.** Un decorador sobre el repositorio guarda la última tasa en memoria. Se actualiza cuando se guarda una nueva y vence por tiempo, así que una tasa guardada por otra instancia igual se detecta.
+- **Logs estructurados.** Login y transacciones escriben una línea JSON por petición (método, ruta, estado, duración y usuario) en la salida estándar, con el campo `severity` que entiende Google Cloud Logging. Docker, Dokploy y Cloud Run la recogen de ahí. Nunca se registran el body, la query ni los headers. Para otro endpoint: `@UseInterceptors(RequestLogInterceptor)`.
+- **El scheduler no tumba la API.** Si SUNAT falla, se registra y se sigue con la última tasa. Las consultas nunca se solapan.
 
-- **Refresh tokens:** short-lived access tokens plus a rotating refresh token, stored hashed.
-- **History cleanup:** every refresh saves a new document (2,880 per day). A TTL index could expire the old ones.
+## Pendiente
+
+- **Refresh tokens:** tokens de acceso cortos más un token de renovación que rota, guardado con hash.
+- **Limpieza del historial de tasas:** cada consulta guarda un documento (2.880 por día). Un índice TTL podría borrar los viejos.

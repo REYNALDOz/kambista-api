@@ -6,7 +6,6 @@ interface CachedRate {
   cachedAt: number;
 }
 
-
 export class CachedExchangeRateRepository implements ExchangeRateRepository {
   private cached?: CachedRate;
 
