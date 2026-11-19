@@ -1,6 +1,6 @@
 import { InvalidNameError } from './auth.errors';
 import { Email } from './value-objects/email';
-import { Role, ROLES } from './value-objects/role';
+import { Role } from './value-objects/role';
 
 interface RegisterProps {
   name: string;
@@ -27,7 +27,7 @@ export class User {
     if (!trimmed) {
       throw new InvalidNameError();
     }
-    return new User(undefined, trimmed, email, passwordHash, ROLES[0]);
+    return new User(undefined, trimmed, email, passwordHash, 'user');
   }
   static restore({ id, name, email, passwordHash, role }: RestoreProps): User {
     return new User(id, name, email, passwordHash, role);

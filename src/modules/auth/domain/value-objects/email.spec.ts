@@ -17,7 +17,7 @@ describe('Email', () => {
   it.each(['', 'reynaldo', 'reynaldo@', '@example.com', 'reynaldo@example'])(
     'rejects invalid email "%s"',
     (raw) => {
-      expect(() => Email.create(raw)).toThrow('Invalid email');
+      expect(() => Email.create(raw)).toThrow('Invalid format email');
     },
   );
 });
