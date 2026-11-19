@@ -1,5 +1,5 @@
 import { Model } from 'mongoose';
-import { TransactionRepository } from '../../domain/ports/transaction.repository';
+import { Page, PageRequest, TransactionRepository } from '../../domain/ports/transaction.repository';
 import { isCurrency, Transaction } from '../../domain/transaction';
 import { TransactionDocument } from './transaction.schema';
 
@@ -28,12 +28,19 @@ export class MongoTransactionRepository implements TransactionRepository {
     userId: string,
     from: Date,
     to: Date,
-  ): Promise<Transaction[]> {
-    const documents = await this.model
-      .find({ userId, date: { $gte: from, $lte: to } })
-      .sort({ date: -1, _id: -1 })
-      .lean<StoredTransaction[]>();
-    return documents.map((document) => this.toDomain(document));
+    { page, limit }: PageRequest,
+  ): Promise<Page<Transaction>> {
+    const filter = { userId, date: { $gte: from, $lte: to } };
+    const [documents, total] = await Promise.all([
+      this.model
+        .find(filter)
+        .sort({ date: -1, _id: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean<StoredTransaction[]>(),
+      this.model.countDocuments(filter),
+    ]);
+    return { items: documents.map((d) => this.toDomain(d)), total };
   }
 
   private toDomain(document: StoredTransaction): Transaction {

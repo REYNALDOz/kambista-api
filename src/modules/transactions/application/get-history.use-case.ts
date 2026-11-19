@@ -1,14 +1,19 @@
 import { Role } from '../../auth/domain/value-objects/role';
-import { TransactionRepository } from '../domain/ports/transaction.repository';
+import { Page, TransactionRepository } from '../domain/ports/transaction.repository';
 import { Transaction } from '../domain/transaction';
 import { InvalidDateRangeError } from '../domain/transaction.errors';
 
+export const DEFAULT_LIMIT = 10;
+
+export interface GetHistoryInput {
+  page?: number;
+  limit?: number;
+}
 export interface GetHistoryInput {
   requesterId: string;
   requesterRole: Role;
   startDate: string;
   endDate: string;
-  /** Only honored for admins. */
   userId?: string;
 }
 
@@ -17,7 +22,7 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 export class GetHistoryUseCase {
   constructor(private readonly transactions: TransactionRepository) {}
 
-  async execute(input: GetHistoryInput): Promise<Transaction[]> {
+  async execute(input: GetHistoryInput): Promise<Page<Transaction>> {
     const from = new Date(input.startDate);
     const to = this.endOfRange(input.endDate);
     if (
@@ -28,7 +33,10 @@ export class GetHistoryUseCase {
       throw new InvalidDateRangeError();
     }
 
-    return this.transactions.findByUser(this.whoseHistory(input), from, to);
+    return this.transactions.findByUser(this.whoseHistory(input), from, to, {
+      page: input.page ?? 1,
+      limit: input.limit ?? DEFAULT_LIMIT,
+    });
   }
 
   /** A regular user always sees their own history, whatever userId they send. */

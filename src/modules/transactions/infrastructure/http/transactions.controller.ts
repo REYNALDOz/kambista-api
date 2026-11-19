@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express'
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -13,7 +14,7 @@ import { CurrentUser } from '../../../auth/infrastructure/security/current-user.
 import { JwtAuthGuard } from '../../../auth/infrastructure/security/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../../auth/infrastructure/security/authenticated-user';
 import { CreateTransactionUseCase } from '../../application/create-transaction.use-case';
-import { GetHistoryUseCase } from '../../application/get-history.use-case';
+import { DEFAULT_LIMIT, GetHistoryUseCase } from '../../application/get-history.use-case';
 import {
   CreateTransactionDto,
   HistoryQueryDto,
@@ -43,7 +44,6 @@ export class TransactionsController {
     @Body() dto: CreateTransactionDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Promise<TransactionResponse> {
-    // The owner comes from the token, never from the body.
     const transaction = await this.createTransaction.execute({
       userId: user.id,
       from: dto.monedaOrigen,
@@ -58,19 +58,25 @@ export class TransactionsController {
     summary:
       'Transactions between two dates. A user sees their own; an admin can send userId',
   })
-  @ApiOkResponse({ type: [TransactionResponse] })
+  @ApiOkResponse({ type: [TransactionResponse], headers: { 'X-Total-Count': { description: 'Matches in the whole range', schema: { type: 'integer' } } } })
   @ApiBadRequestResponse({ description: 'Invalid or inverted date range' })
   async history(
     @Query() query: HistoryQueryDto,
     @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
   ): Promise<TransactionResponse[]> {
-    const transactions = await this.getHistory.execute({
+    const result = await this.getHistory.execute({
       requesterId: user.id,
       requesterRole: user.role,
       startDate: query.startDate,
       endDate: query.endDate,
       userId: query.userId,
+      page: query.page,
+      limit: query.limit,
     });
-    return transactions.map(toResponse);
+    response.setHeader('X-Total-Count', String(result.total));
+    response.setHeader('X-Page', String(query.page ?? 1));
+    response.setHeader('X-Limit', String(query.limit ?? DEFAULT_LIMIT));
+    return result.items.map(toResponse);
   }
 }
