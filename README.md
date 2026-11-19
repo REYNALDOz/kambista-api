@@ -117,6 +117,7 @@ test/                end-to-end tests
 
 - **Paginated history.** `page` and `limit` (default 50, maximum 100) go in the query, the body stays a plain array as the challenge defines, and the total comes in the `X-Total-Count`, `X-Page` and `X-Limit` headers (exposed through CORS).
 - **Exchange rate cache.** A decorator over the repository (same port) keeps the latest rate in memory. It is refreshed when the scheduler saves a rate and expires after a TTL, so a rate saved by another instance is still picked up. An empty result is never cached.
+- **Structured logging, on the endpoints that matter.** Login and the transactions endpoints write one JSON line per request to stdout (method, path, final status, duration in ms and user id), with a `severity` field that Google Cloud Logging understands. It goes to stdout, not to a file, because Docker, Dokploy and Cloud Run collect it from there. The body, the query and the headers are never logged. To log another endpoint, add `@UseInterceptors(RequestLogInterceptor)`.
 - **Login rate limiting.** After 5 failed attempts for the same email and address in 15 minutes, login answers `429` before doing any bcrypt work, even with the right password. A successful login clears the counter. The counter lives in memory (one instance); the port allows a shared store such as Redis.
 
 - **Three layers, dependencies point inwards.** `domain` knows nothing about Nest or MongoDB. `application` defines what it needs as ports (`UserRepository`, `PasswordHasher`, `ExchangeRateProvider`...) and `infrastructure` implements them. Controllers and MongoDB are both adapters, so they live together.
@@ -135,5 +136,4 @@ test/                end-to-end tests
 Extras from the challenge that this repository does not have, and what I would do:
 
 - **Refresh tokens:** short-lived access tokens plus a rotating refresh token, stored hashed.
-- **Structured logging:** one JSON line per request with method, path, status, duration and user id.
 - **History cleanup:** every refresh saves a new document (2,880 per day). A TTL index could expire the old ones.
