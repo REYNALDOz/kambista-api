@@ -4,3 +4,9 @@ export class InvalidExchangeRateError extends Error {
     this.name = 'InvalidExchangeRateError';
   }
 }
+export class ExchangeRateNotAvailableError extends Error {
+  constructor() {
+    super('There is no exchange rate registered yet');
+    this.name = 'ExchangeRateNotAvailableError';
+  }
+}
