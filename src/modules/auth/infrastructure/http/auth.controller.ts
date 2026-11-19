@@ -4,8 +4,10 @@ import {
   Get,
   HttpCode,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -14,6 +16,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { RegisterUserUseCase } from '../../application/register-user.use-case';
@@ -60,10 +63,14 @@ export class AuthController {
   @ApiOkResponse({ type: LoginResponse })
   @ApiBadRequestResponse({ description: 'Missing or unknown fields' })
   @ApiUnauthorizedResponse({ description: 'Invalid credentials' })
-  async login(@Body() dto: LoginDto) {
+  @ApiTooManyRequestsResponse({
+    description: 'Too many failed attempts for this email and address',
+  })
+  async login(@Body() dto: LoginDto, @Req() req: Request) {
     const { accessToken, user } = await this.loginUser.execute({
       email: dto.email,
       password: dto.password,
+      address: req.ip,
     });
     return {
       access_token: accessToken,

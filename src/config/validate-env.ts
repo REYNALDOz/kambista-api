@@ -7,6 +7,8 @@ const REQUIRED = [
 const POSITIVE_INTEGERS = [
   'EXCHANGE_RATE_TIMEOUT_MS',
   'EXCHANGE_RATE_REFRESH_MS',
+  'LOGIN_MAX_FAILURES',
+  'LOGIN_WINDOW_MS',
 ];
 const MIN_SECRET_LENGTH = 16;
 
@@ -33,6 +35,16 @@ export function validateEnv(env: Record<string, unknown>): void {
     ) {
       throw new Error(`${name} must be a positive integer`);
     }
+  }
+  // 0 is valid here: it turns the exchange rate cache off.
+  const ttl = env.EXCHANGE_RATE_CACHE_TTL_MS;
+  if (
+    ttl !== undefined &&
+    !(typeof ttl === 'string' && /^(0|[1-9]\d*)$/.test(ttl))
+  ) {
+    throw new Error(
+      'EXCHANGE_RATE_CACHE_TTL_MS must be an integer, 0 or greater',
+    );
   }
 }
 

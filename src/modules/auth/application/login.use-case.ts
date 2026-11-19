@@ -1,7 +1,9 @@
 import {
   InvalidCredentialsError,
   InvalidEmailError,
+  TooManyLoginAttemptsError,
 } from '../domain/auth.errors';
+import { LoginAttemptLimiter } from '../domain/ports/login-attempt-limiter';
 import { PasswordHasher } from '../domain/ports/password-hasher';
 import { TokenIssuer } from '../domain/ports/token-issuer';
 import { UserRepository } from '../domain/ports/user.repository';
@@ -12,6 +14,8 @@ import { Role } from '../domain/value-objects/role';
 export interface LoginInput {
   email: string;
   password: string;
+  /** Where the attempt comes from. Failures are counted per email and address. */
+  address?: string;
 }
 
 export interface LoginOutput {
@@ -26,12 +30,18 @@ export class LoginUseCase {
     private readonly users: UserRepository,
     private readonly hasher: PasswordHasher,
     private readonly tokens: TokenIssuer,
+    private readonly limiter: LoginAttemptLimiter,
   ) {}
 
   async execute(input: LoginInput): Promise<LoginOutput> {
+    const attemptKey = `${input.email.trim().toLowerCase()}|${input.address ?? ''}`;
+    // Checked before any bcrypt work, so a blocked key also costs the server almost nothing.
+    if (await this.limiter.isBlocked(attemptKey)) {
+      throw new TooManyLoginAttemptsError();
+    }
+
     const user = await this.findUser(input.email);
 
-    // Aqui vamos  agregar los intentos de login, más adelante se puede agregar un limite de intentos.
     // siempre se compara una vez, incluso sin un usuario, para que cada fallo tome el mismo tiempo.
     const hashToCompare = user?.passwordHash ?? (await this.getDecoyHash());
     const passwordMatches = await this.hasher.compare(
@@ -41,8 +51,10 @@ export class LoginUseCase {
 
     // mismo error para email desconocido y contrasenia incorrecta: no revelar que emails existen.
     if (!user || !passwordMatches) {
+      await this.limiter.recordFailure(attemptKey);
       throw new InvalidCredentialsError();
     }
+    await this.limiter.reset(attemptKey);
 
     const id = user.id as string;
     const accessToken = await this.tokens.issue({ sub: id, role: user.role });

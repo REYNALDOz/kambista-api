@@ -10,6 +10,7 @@ import {
   InvalidCredentialsError,
   InvalidEmailError,
   InvalidNameError,
+  TooManyLoginAttemptsError,
 } from '../modules/auth/domain/auth.errors';
 import { ExchangeRateNotAvailableError } from '../modules/exchange-rate/domain/exchange-rate.errors';
 import {
@@ -23,10 +24,10 @@ const STATUS_BY_ERROR = new Map<new (...args: never[]) => Error, HttpStatus>([
   [InvalidEmailError, HttpStatus.BAD_REQUEST],
   [InvalidNameError, HttpStatus.BAD_REQUEST],
   [InvalidCredentialsError, HttpStatus.UNAUTHORIZED],
+  [TooManyLoginAttemptsError, HttpStatus.TOO_MANY_REQUESTS],
   [SameCurrencyError, HttpStatus.BAD_REQUEST],
   [InvalidAmountError, HttpStatus.BAD_REQUEST],
   [InvalidDateRangeError, HttpStatus.BAD_REQUEST],
-  // Temporary: the rate arrives from SUNAT every 30 seconds, so retrying later can work.
   [ExchangeRateNotAvailableError, HttpStatus.SERVICE_UNAVAILABLE],
 ]);
 
