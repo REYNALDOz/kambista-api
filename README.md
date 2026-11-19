@@ -44,6 +44,9 @@ Copy `.env.example`; every variable is explained there.
 | `EXCHANGE_RATE_TIMEOUT_MS` | no | Timeout of each fetch (default `5000`) |
 | `EXCHANGE_RATE_SYNC_ENABLED` | no | `false` turns the periodic fetch off |
 | `CORS_ORIGIN` | no | Web app origin (default `http://localhost:5173`). Several can be separated by commas. A trailing slash or spaces are tolerated, and an empty value means the default |
+| `EXCHANGE_RATE_CACHE_TTL_MS` | no | How long the latest rate is kept in memory (default `60000`). `0` turns the cache off |
+| `LOGIN_MAX_FAILURES` | no | Failed logins allowed per email and address before blocking (default `5`) |
+| `LOGIN_WINDOW_MS` | no | Length of that window, in milliseconds (default `900000`, 15 minutes) |
 | `PORT` | no | HTTP port (default `3000`) |
 
 The API refuses to start, with a clear message, if a required variable is missing or invalid.
@@ -112,6 +115,10 @@ test/                end-to-end tests
 
 ## Architecture decisions
 
+- **Paginated history.** `page` and `limit` (default 50, maximum 100) go in the query, the body stays a plain array as the challenge defines, and the total comes in the `X-Total-Count`, `X-Page` and `X-Limit` headers (exposed through CORS).
+- **Exchange rate cache.** A decorator over the repository (same port) keeps the latest rate in memory. It is refreshed when the scheduler saves a rate and expires after a TTL, so a rate saved by another instance is still picked up. An empty result is never cached.
+- **Login rate limiting.** After 5 failed attempts for the same email and address in 15 minutes, login answers `429` before doing any bcrypt work, even with the right password. A successful login clears the counter. The counter lives in memory (one instance); the port allows a shared store such as Redis.
+
 - **Three layers, dependencies point inwards.** `domain` knows nothing about Nest or MongoDB. `application` defines what it needs as ports (`UserRepository`, `PasswordHasher`, `ExchangeRateProvider`...) and `infrastructure` implements them. Controllers and MongoDB are both adapters, so they live together.
 - **Use cases have no Nest decorators.** Each module wires ports to adapters in one place (`*.module.ts`), so swapping bcrypt, MongoDB or SUNAT means touching one adapter.
 - **Money uses `Decimal`, not `number`.** `100 * 3.739` is `373.90000000000003` in JavaScript. Amounts are stored as `Decimal128` and rounded to 2 decimals.
@@ -127,9 +134,6 @@ test/                end-to-end tests
 
 Extras from the challenge that this repository does not have, and what I would do:
 
-- **Login rate limiting:** limit failed attempts per email and address. An in-memory counter works for one instance; several instances need a shared store such as Redis.
 - **Refresh tokens:** short-lived access tokens plus a rotating refresh token, stored hashed.
-- **Paginated history:** `page` and `limit` parameters with the total in a header. Today the history returns every match.
-- **Exchange rate cache:** keep the latest rate in memory with a short TTL, to avoid reading the database on every transaction.
 - **Structured logging:** one JSON line per request with method, path, status, duration and user id.
 - **History cleanup:** every refresh saves a new document (2,880 per day). A TTL index could expire the old ones.
