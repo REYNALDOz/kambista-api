@@ -8,7 +8,7 @@ export class Email {
   static create(raw: string): Email {
     const normalized = raw.trim().toLowerCase();
     if (!EMAIL_PATTERN.test(normalized)) {
-      throw new InvalidEmailError(raw);
+      throw new InvalidEmailError();
     }
     return new Email(normalized);
   }

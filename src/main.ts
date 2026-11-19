@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigModule } from '@nestjs/config';
@@ -14,4 +15,9 @@ async function bootstrap() {
   setupSwagger(app);
   await app.listen(process.env.PORT ?? 3000);
 }
-void bootstrap();
+bootstrap().catch((error: unknown) => {
+  new Logger('Bootstrap').error(
+    error instanceof Error ? error.message : String(error),
+  );
+  process.exit(1);
+});
