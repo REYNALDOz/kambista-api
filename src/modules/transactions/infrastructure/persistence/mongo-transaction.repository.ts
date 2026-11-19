@@ -1,5 +1,9 @@
 import { Model } from 'mongoose';
-import { Page, PageRequest, TransactionRepository } from '../../domain/ports/transaction.repository';
+import {
+  Page,
+  PageRequest,
+  TransactionRepository,
+} from '../../domain/ports/transaction.repository';
 import { isCurrency, Transaction } from '../../domain/transaction';
 import { TransactionDocument } from './transaction.schema';
 
@@ -7,7 +11,6 @@ type StoredTransaction = TransactionDocument & {
   _id: { toString(): string };
 };
 
-/** Translates between Mongo documents and the domain `Transaction`. */
 export class MongoTransactionRepository implements TransactionRepository {
   constructor(private readonly model: Model<TransactionDocument>) {}
 
@@ -44,7 +47,6 @@ export class MongoTransactionRepository implements TransactionRepository {
   }
 
   private toDomain(document: StoredTransaction): Transaction {
-    // Data coming from outside the domain is validated before it becomes a Currency.
     if (!isCurrency(document.from) || !isCurrency(document.to)) {
       throw new Error(
         `Transaction ${document._id.toString()} has an unknown currency`,

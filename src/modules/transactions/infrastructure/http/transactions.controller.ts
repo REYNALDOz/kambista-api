@@ -1,5 +1,13 @@
-import { Body, Controller, Get, Post, Query, Res, UseGuards } from '@nestjs/common';
-import type { Response } from 'express'
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -14,7 +22,10 @@ import { CurrentUser } from '../../../auth/infrastructure/security/current-user.
 import { JwtAuthGuard } from '../../../auth/infrastructure/security/jwt-auth.guard';
 import type { AuthenticatedUser } from '../../../auth/infrastructure/security/authenticated-user';
 import { CreateTransactionUseCase } from '../../application/create-transaction.use-case';
-import { DEFAULT_LIMIT, GetHistoryUseCase } from '../../application/get-history.use-case';
+import {
+  DEFAULT_LIMIT,
+  GetHistoryUseCase,
+} from '../../application/get-history.use-case';
 import {
   CreateTransactionDto,
   HistoryQueryDto,
@@ -58,7 +69,15 @@ export class TransactionsController {
     summary:
       'Transactions between two dates. A user sees their own; an admin can send userId',
   })
-  @ApiOkResponse({ type: [TransactionResponse], headers: { 'X-Total-Count': { description: 'Matches in the whole range', schema: { type: 'integer' } } } })
+  @ApiOkResponse({
+    type: [TransactionResponse],
+    headers: {
+      'X-Total-Count': {
+        description: 'Matches in the whole range',
+        schema: { type: 'integer' },
+      },
+    },
+  })
   @ApiBadRequestResponse({ description: 'Invalid or inverted date range' })
   async history(
     @Query() query: HistoryQueryDto,

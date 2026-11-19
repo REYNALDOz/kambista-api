@@ -1,7 +1,10 @@
 import { ExchangeRate } from '../../../exchange-rate/domain/exchange-rate';
-import { Page, PageRequest, TransactionRepository } from '../../domain/ports/transaction.repository';
+import {
+  Page,
+  PageRequest,
+  TransactionRepository,
+} from '../../domain/ports/transaction.repository';
 import { Transaction } from '../../domain/transaction';
-
 
 export class InMemoryTransactionRepository implements TransactionRepository {
   readonly transactions: Transaction[] = [];

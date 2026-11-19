@@ -1,20 +1,24 @@
 import { Role } from '../../auth/domain/value-objects/role';
-import { Page, TransactionRepository } from '../domain/ports/transaction.repository';
+import {
+  Page,
+  TransactionRepository,
+} from '../domain/ports/transaction.repository';
 import { Transaction } from '../domain/transaction';
 import { InvalidDateRangeError } from '../domain/transaction.errors';
 
-export const DEFAULT_LIMIT = 10;
+/** How many operations a page has when the caller does not say. */
+export const DEFAULT_LIMIT = 50;
 
-export interface GetHistoryInput {
-  page?: number;
-  limit?: number;
-}
 export interface GetHistoryInput {
   requesterId: string;
   requesterRole: Role;
   startDate: string;
   endDate: string;
+  /** Only honored for admins. */
   userId?: string;
+  /** Starts at 1. */
+  page?: number;
+  limit?: number;
 }
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
