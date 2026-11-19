@@ -1,124 +1,135 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Kambista FX API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A currency exchange API with JWT authentication and roles, built with **NestJS**, **TypeScript** and **MongoDB**, following Clean Architecture and DDD.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Users register, log in and exchange dollars and soles using the latest SUNAT exchange rate, which the API fetches and stores every 30 seconds. A user sees their own history; an admin can see the history of any user.
 
-## Description
+The web app lives in a separate repository: `kambista-frontend`.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Features
 
-## Project setup
+- Register and log in with JWT. Roles: `user` (default) and `admin`.
+- SUNAT exchange rate fetched every 30 seconds and saved. If the provider fails, the error is logged and the last saved rate keeps serving.
+- Create an exchange: USD to PEN multiplies by the sell rate, PEN to USD divides by the buy rate.
+- History by date range. A user sees only their own; an admin can ask for any user.
+- Validation with specific, descriptive errors. Swagger documentation.
+
+## Prerequisites
+
+- Node.js 24 and pnpm 11 (the versions it was developed with)
+- Docker, to run MongoDB
+
+## Getting started
 
 ```bash
-$ pnpm install
+pnpm install
+cp .env.example .env        # then set JWT_SECRET to a long random value
+docker compose up -d        # starts MongoDB
+pnpm start:dev              # http://localhost:3000
 ```
 
-## Compile and run the project
+The interactive documentation is at **http://localhost:3000/docs** (use the *Authorize* button to paste a token).
+
+### Environment variables
+
+Copy `.env.example`; every variable is explained there.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `MONGODB_URI` | yes | MongoDB connection string, including the database name |
+| `JWT_SECRET` | yes | Secret used to sign tokens (at least 16 characters) |
+| `JWT_EXPIRES_IN` | yes | Token lifetime, for example `15m` or `1h` |
+| `EXCHANGE_RATE_API_URL` | yes | SUNAT exchange rate provider |
+| `EXCHANGE_RATE_REFRESH_MS` | no | How often the rate is fetched (default `30000`) |
+| `EXCHANGE_RATE_TIMEOUT_MS` | no | Timeout of each fetch (default `5000`) |
+| `EXCHANGE_RATE_SYNC_ENABLED` | no | `false` turns the periodic fetch off |
+| `CORS_ORIGIN` | no | Web app origin, **without a trailing slash** (default `http://localhost:5173`) |
+| `PORT` | no | HTTP port (default `3000`) |
+
+The API refuses to start, with a clear message, if a required variable is missing or invalid.
+
+### Making a user an admin
+
+The `admin` role is managed directly in the database:
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+docker exec -it kambista-mongo mongosh -u <MONGO_ROOT_USER> -p <MONGO_ROOT_PASSWORD> --authenticationDatabase admin
+> use kambista
+> db.users.updateOne({ email: "juan@example.com" }, { $set: { role: "admin" } })
 ```
+Then log in again: the role travels inside the token.
 
-## Run tests
+## API
+
+All routes are under `/v1`. Everything except register and login needs `Authorization: Bearer <token>`.
+
+| Method | Route | Description |
+| --- | --- | --- |
+| `POST` | `/auth/register` | Register a user (role `user`) |
+| `POST` | `/auth/login` | Returns `access_token` and `usuario` |
+| `GET` | `/auth/me` | Identity and role stored in the token |
+| `POST` | `/transactions` | Create an exchange with the latest rate |
+| `GET` | `/transactions/history` | `startDate`, `endDate` and, for admins, `userId` |
 
 ```bash
-# unit tests
-$ pnpm run test
+curl -X POST localhost:3000/v1/auth/register -H 'Content-Type: application/json' \
+  -d '{"nombre":"Juan Pérez","email":"juan@example.com","password":"contraseña123"}'
 
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+curl -X POST localhost:3000/v1/transactions -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"monedaOrigen":"USD","monedaDestino":"PEN","monto":100}'
 ```
 
-## Deployment
+Errors use specific names, for example `EmailAlreadyRegisteredError` (409), `InvalidCredentialsError` (401), `SameCurrencyError` (400) or `ExchangeRateNotAvailableError` (503, no rate saved yet).
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Running the tests
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm test        # unit tests, no database needed
+pnpm test:e2e    # register -> login -> exchange -> history; needs MongoDB running
+pnpm test:cov    # unit tests with coverage
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The e2e tests use their own throwaway database (`kambista_e2e`, dropped at the end) and a fixed exchange rate, so they never touch your data nor call SUNAT.
 
-## Observability
+Other scripts: `pnpm build`, `pnpm lint`, `pnpm format`.
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+## Project structure
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
-
-```bash
-$ pnpm install @nestjs/observe
+```
+src/
+  modules/
+    auth/            users, register, login, JWT guard and roles
+    exchange-rate/   fetch and save the SUNAT rate
+    transactions/    exchange requests and history
+      domain/          entities, value objects, errors and ports (interfaces)
+      application/     use cases
+      infrastructure/  HTTP, MongoDB, bcrypt, JWT, SUNAT client
+  config/            startup validation of the environment
+  shared/            domain error to HTTP status mapping
+test/                end-to-end tests
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+## Architecture decisions
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+- **Three layers, dependencies point inwards.** `domain` knows nothing about Nest or MongoDB. `application` defines what it needs as ports (`UserRepository`, `PasswordHasher`, `ExchangeRateProvider`...) and `infrastructure` implements them. Controllers and MongoDB are both adapters, so they live together.
+- **Use cases have no Nest decorators.** Each module wires ports to adapters in one place (`*.module.ts`), so swapping bcrypt, MongoDB or SUNAT means touching one adapter.
+- **Money uses `Decimal`, not `number`.** `100 * 3.739` is `373.90000000000003` in JavaScript. Amounts are stored as `Decimal128` and rounded to 2 decimals.
+- **Rules live in the domain.** `Transaction.create` rejects equal currencies and amounts that are not greater than zero, and picks sell or buy. "A user only sees their own history" is in the use case, so it is tested without HTTP.
+- **The owner of a transaction comes from the token**, never from the request body.
+- **Login does not reveal which emails exist.** An unknown email and a wrong password give the same error, and both do the same bcrypt work so they take the same time.
+- **A unique index on `email`** is the final guarantee against two simultaneous registrations; the use case only checks it to give a friendly error.
+- **The scheduler never crashes the API.** A provider failure is logged and the last saved rate keeps being used. Fetches never overlap.
+- **Dates are handled in UTC.** An `endDate` without time includes that whole day.
+- **The role travels inside the token.** If an admin is demoted, their token keeps working until it expires, which is why the lifetime is short.
 
-## Resources
+## Not implemented yet
 
-Check out a few resources that may come in handy when working with NestJS:
+Extras from the challenge that this repository does not have, and what I would do:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Login rate limiting:** limit failed attempts per email and address. An in-memory counter works for one instance; several instances need a shared store such as Redis.
+- **Refresh tokens:** short-lived access tokens plus a rotating refresh token, stored hashed.
+- **Paginated history:** `page` and `limit` parameters with the total in a header. Today the history returns every match.
+- **Exchange rate cache:** keep the latest rate in memory with a short TTL, to avoid reading the database on every transaction.
+- **Structured logging:** one JSON line per request with method, path, status, duration and user id.
+- **History cleanup:** every refresh saves a new document (2,880 per day). A TTL index could expire the old ones.
