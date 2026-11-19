@@ -1,6 +1,6 @@
 import { Transaction } from '../domain/transaction';
 import { InvalidDateRangeError } from '../domain/transaction.errors';
-import { GetHistoryUseCase } from './get-history.use-case';
+import { DEFAULT_LIMIT, GetHistoryUseCase } from './get-history.use-case';
 import { aRate, InMemoryTransactionRepository } from './testing/fakes';
 
 describe('GetHistoryUseCase', () => {
@@ -80,6 +80,71 @@ describe('GetHistoryUseCase', () => {
     });
 
     expect(result.items.map((t) => t.id)).toEqual(['tx-2']);
+  });
+
+  describe('pagination', () => {
+    const asUser = {
+      requesterId: 'user-1',
+      requesterRole: 'user' as const,
+      ...range,
+    };
+
+    it('returns the requested page and the total of the whole range', async () => {
+      const result = await useCase.execute({ ...asUser, page: 2, limit: 1 });
+
+      expect(result.items.map((t) => t.id)).toEqual(['tx-1']);
+      expect(result.total).toBe(2);
+    });
+
+    it('returns the newest transactions on the first page', async () => {
+      const result = await useCase.execute({ ...asUser, page: 1, limit: 1 });
+
+      expect(result.items.map((t) => t.id)).toEqual(['tx-2']);
+      expect(result.total).toBe(2);
+    });
+
+    it('returns no items but the real total for a page past the end', async () => {
+      const result = await useCase.execute({ ...asUser, page: 9, limit: 1 });
+
+      expect(result.items).toEqual([]);
+      expect(result.total).toBe(2);
+    });
+
+    it('uses the first page and the default size when nothing is asked', async () => {
+      const result = await useCase.execute(asUser);
+
+      expect(result.items).toHaveLength(2);
+      expect(result.total).toBe(2);
+    });
+
+    it('has a default size of 50', () => {
+      expect(DEFAULT_LIMIT).toBe(50);
+    });
+
+    it('does not let a user page into the history of someone else', async () => {
+      const result = await useCase.execute({
+        ...asUser,
+        userId: 'user-2',
+        limit: 100,
+      });
+
+      expect(result.items.every((t) => t.userId === 'user-1')).toBe(true);
+      expect(result.total).toBe(2);
+    });
+
+    it('pages the history of another user for an admin, with that user total', async () => {
+      const result = await useCase.execute({
+        requesterId: 'admin-1',
+        requesterRole: 'admin',
+        userId: 'user-1',
+        ...range,
+        page: 1,
+        limit: 1,
+      });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.total).toBe(2);
+    });
   });
 
   it.each([
