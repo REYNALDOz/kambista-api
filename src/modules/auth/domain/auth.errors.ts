@@ -10,3 +10,15 @@ export class InvalidNameError extends Error {
     this.name = 'InvalidNameError';
   }
 }
+export class InvalidCredentialsError extends Error {
+  constructor() {
+    super('Invalid credentials');
+    this.name = 'InvalidCredentialsError';
+  }
+}
+export class EmailAlreadyRegisteredError extends Error {
+  constructor() {
+    super('Email is already registered');
+    this.name = 'EmailAlreadyRegisteredError';
+  }
+}
