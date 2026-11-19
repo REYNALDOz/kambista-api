@@ -8,9 +8,6 @@ export class JwtTokenIssuer implements TokenIssuer {
   ) {}
 
   issue({ sub, role }: TokenPayload): Promise<string> {
-    return this.jwt.signAsync(
-      { sub, role },
-      { expiresIn: this.expiresIn },
-    );
+    return this.jwt.signAsync({ sub, role }, { expiresIn: this.expiresIn });
   }
 }
