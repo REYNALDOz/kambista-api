@@ -12,6 +12,7 @@ import {
 } from './exchange-rate.tokens';
 import { ExchangeRateSyncLifecycle } from './infrastructure/exchange-rate-sync.lifecycle';
 import { ExchangeRateScheduler } from './infrastructure/exchange-rate.scheduler';
+import { CachedExchangeRateRepository } from './infrastructure/persistence/cached-exchange-rate.repository';
 import { MongoExchangeRateRepository } from './infrastructure/persistence/mongo-exchange-rate.repository';
 import {
   ExchangeRateDocument,
@@ -22,6 +23,7 @@ import { SunatExchangeRateProvider } from './infrastructure/sunat-exchange-rate.
 const MODEL_NAME = 'ExchangeRate';
 const DEFAULT_TIMEOUT_MS = 5000;
 const DEFAULT_REFRESH_MS = 30_000;
+const DEFAULT_CACHE_TTL_MS = 60_000;
 
 @Module({
   imports: [
@@ -41,9 +43,14 @@ const DEFAULT_REFRESH_MS = 30_000;
     },
     {
       provide: EXCHANGE_RATE_REPOSITORY,
-      inject: [getModelToken(MODEL_NAME)],
-      useFactory: (model: Model<ExchangeRateDocument>) =>
-        new MongoExchangeRateRepository(model),
+      inject: [getModelToken(MODEL_NAME), ConfigService],
+      useFactory: (model: Model<ExchangeRateDocument>, config: ConfigService) =>
+        new CachedExchangeRateRepository(
+          new MongoExchangeRateRepository(model),
+          Number(
+            config.get('EXCHANGE_RATE_CACHE_TTL_MS', DEFAULT_CACHE_TTL_MS),
+          ),
+        ),
     },
     {
       provide: RefreshExchangeRateUseCase,
