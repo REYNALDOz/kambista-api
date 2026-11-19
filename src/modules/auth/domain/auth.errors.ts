@@ -4,3 +4,9 @@ export class InvalidEmailError extends Error {
     this.name = 'InvalidEmailError';
   }
 }
+export class InvalidNameError extends Error {
+  constructor() {
+    super('Name is required');
+    this.name = 'InvalidNameError';
+  }
+}
