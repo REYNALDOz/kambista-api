@@ -10,3 +10,9 @@ export class ExchangeRateNotAvailableError extends Error {
     this.name = 'ExchangeRateNotAvailableError';
   }
 }
+export class ExchangeRateUnavailableError extends Error {
+  constructor(reason: string) {
+    super(`Exchange rate is unavailable: ${reason}`);
+    this.name = 'ExchangeRateUnavailableError';
+  }
+}
