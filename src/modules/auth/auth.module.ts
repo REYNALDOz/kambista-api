@@ -17,6 +17,8 @@ import {
   UserDocument,
   UserSchema,
 } from './infrastructure/persistence/user.schema';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './infrastructure/security/jwt.strategy';
 
 const USER_MODEL_NAME = 'User';
 
@@ -29,6 +31,7 @@ const USER_MODEL_NAME = 'User';
         secret: config.getOrThrow<string>('JWT_SECRET'),
       }),
     }),
+    PassportModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -65,6 +68,7 @@ const USER_MODEL_NAME = 'User';
         tokens: TokenIssuer,
       ) => new LoginUseCase(users, hasher, tokens),
     },
+    JwtStrategy,
   ],
 })
 export class AuthModule {}

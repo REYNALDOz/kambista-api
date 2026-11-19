@@ -1,6 +1,14 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiBearerAuth,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -13,6 +21,9 @@ import { LoginUseCase } from '../../application/login.use-case';
 import { LoginResponse, UserResponse } from './dto/auth.responses';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginDto } from './dto/login.dto';
+import type { AuthenticatedUser } from '../security/authenticated-user';
+import { CurrentUser } from '../security/current-user.decorator';
+import { JwtAuthGuard } from '../security/jwt-auth.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -63,5 +74,14 @@ export class AuthController {
         rol: user.role,
       },
     };
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Identity and role stored in the access token' })
+  @ApiUnauthorizedResponse({ description: 'Missing, invalid or expired token' })
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return { id: user.id, rol: user.role };
   }
 }
