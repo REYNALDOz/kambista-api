@@ -2,17 +2,20 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   Max,
+  Min,
 } from 'class-validator';
 import {
   CURRENCIES,
   type Currency,
   type Transaction,
 } from '../../domain/transaction';
+import { Type } from 'class-transformer';
 
 const MAX_AMOUNT = 9_999_999.99;
 
@@ -51,6 +54,21 @@ export class HistoryQueryDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @ApiPropertyOptional({ default: 1, minimum: 1, description: 'Page, from 1' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ default: 50, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }
 
 export class TransactionResponse {
@@ -76,7 +94,6 @@ export class TransactionResponse {
   fecha!: string;
 }
 
-/** Translates the domain transaction into the names and types the API contract asks for. */
 export function toResponse(transaction: Transaction): TransactionResponse {
   return {
     id: transaction.id as string,

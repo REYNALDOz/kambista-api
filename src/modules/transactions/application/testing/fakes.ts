@@ -1,8 +1,8 @@
 import { ExchangeRate } from '../../../exchange-rate/domain/exchange-rate';
-import { TransactionRepository } from '../../domain/ports/transaction.repository';
+import { Page, PageRequest, TransactionRepository } from '../../domain/ports/transaction.repository';
 import { Transaction } from '../../domain/transaction';
 
-/** Keeps transactions in an array and assigns ids like a real database would. */
+
 export class InMemoryTransactionRepository implements TransactionRepository {
   readonly transactions: Transaction[] = [];
 
@@ -21,11 +21,19 @@ export class InMemoryTransactionRepository implements TransactionRepository {
     return Promise.resolve(saved);
   }
 
-  findByUser(userId: string, from: Date, to: Date): Promise<Transaction[]> {
+  findByUser(
+    userId: string,
+    from: Date,
+    to: Date,
+    { page, limit }: PageRequest,
+  ): Promise<Page<Transaction>> {
     const found = this.transactions
       .filter((t) => t.userId === userId && t.date >= from && t.date <= to)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
-    return Promise.resolve(found);
+    return Promise.resolve({
+      items: found.slice((page - 1) * limit, page * limit),
+      total: found.length,
+    });
   }
 }
 

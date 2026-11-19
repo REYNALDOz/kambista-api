@@ -36,7 +36,7 @@ describe('GetHistoryUseCase', () => {
       ...range,
     });
 
-    expect(result.map((t) => t.id)).toEqual(['tx-2', 'tx-1']);
+    expect(result.items.map((t) => t.id)).toEqual(['tx-2', 'tx-1']);
   });
 
   it('ignores the userId sent by a regular user: they always see their own', async () => {
@@ -47,7 +47,7 @@ describe('GetHistoryUseCase', () => {
       ...range,
     });
 
-    expect(result.every((t) => t.userId === 'user-1')).toBe(true);
+    expect(result.items.every((t) => t.userId === 'user-1')).toBe(true);
   });
 
   it('lets an admin see the history of another user', async () => {
@@ -58,7 +58,7 @@ describe('GetHistoryUseCase', () => {
       ...range,
     });
 
-    expect(result.map((t) => t.userId)).toEqual(['user-2']);
+    expect(result.items.map((t) => t.userId)).toEqual(['user-2']);
   });
 
   it('shows the admin their own history when no userId is sent', async () => {
@@ -68,7 +68,7 @@ describe('GetHistoryUseCase', () => {
       ...range,
     });
 
-    expect(result).toHaveLength(2);
+    expect(result.items).toHaveLength(2);
   });
 
   it('includes the whole last day of the range', async () => {
@@ -79,7 +79,7 @@ describe('GetHistoryUseCase', () => {
       endDate: '2024-01-18',
     });
 
-    expect(result.map((t) => t.id)).toEqual(['tx-2']);
+    expect(result.items.map((t) => t.id)).toEqual(['tx-2']);
   });
 
   it.each([

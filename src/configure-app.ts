@@ -12,5 +12,8 @@ export function configureApp(app: INestApplication): void {
     }),
   );
   app.useGlobalFilters(new DomainExceptionFilter());
-  app.enableCors({ origin: parseCorsOrigins(process.env.CORS_ORIGIN) });
+  app.enableCors({
+    origin: parseCorsOrigins(process.env.CORS_ORIGIN),
+    exposedHeaders: ['X-Total-Count', 'X-Page', 'X-Limit'],
+  });
 }
