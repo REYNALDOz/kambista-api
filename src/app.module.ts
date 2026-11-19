@@ -2,8 +2,6 @@ import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
@@ -33,7 +31,5 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     ExchangeRateModule,
     TransactionsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

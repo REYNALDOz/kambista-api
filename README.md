@@ -43,7 +43,7 @@ Copy `.env.example`; every variable is explained there.
 | `EXCHANGE_RATE_REFRESH_MS` | no | How often the rate is fetched (default `30000`) |
 | `EXCHANGE_RATE_TIMEOUT_MS` | no | Timeout of each fetch (default `5000`) |
 | `EXCHANGE_RATE_SYNC_ENABLED` | no | `false` turns the periodic fetch off |
-| `CORS_ORIGIN` | no | Web app origin, **without a trailing slash** (default `http://localhost:5173`) |
+| `CORS_ORIGIN` | no | Web app origin (default `http://localhost:5173`). Several can be separated by commas. A trailing slash or spaces are tolerated, and an empty value means the default |
 | `PORT` | no | HTTP port (default `3000`) |
 
 The API refuses to start, with a clear message, if a required variable is missing or invalid.
