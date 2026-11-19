@@ -26,7 +26,11 @@ export function validateEnv(env: Record<string, unknown>): void {
   }
   for (const name of POSITIVE_INTEGERS) {
     // Optional: when it is not set, the code uses its own default.
-    if (env[name] !== undefined && !/^[1-9]\d*$/.test(String(env[name]))) {
+    const value = env[name];
+    if (
+      value !== undefined &&
+      !(typeof value === 'string' && /^[1-9]\d*$/.test(value))
+    ) {
       throw new Error(`${name} must be a positive integer`);
     }
   }
