@@ -5,6 +5,7 @@ import { Connection } from 'mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
     AuthModule,
+    ExchangeRateModule,
   ],
   controllers: [AppController],
   providers: [AppService],
