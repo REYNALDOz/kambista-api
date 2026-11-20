@@ -24,7 +24,8 @@ El frontend está en otro repositorio: `kambista-frontend`.
 
 ```bash
 pnpm install
-cp .env.example .env        # y poné un JWT_SECRET largo y aleatorio
+cp .env.example .env        # y pon un JWT_SECRET largo y aleatorio
+docker compose down -v      # Es para bajar el docker mongo por si antes tenia y luego cambiaste las credenciales, para que guncione con las nuevas
 docker compose up -d        # levanta MongoDB
 pnpm start:dev              # http://localhost:3000
 ```
