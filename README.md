@@ -17,7 +17,7 @@ El frontend está en otro repositorio: `kambista-frontend`.
 
 ## Requisitos
 
-- Node.js 24 y pnpm 11
+- Node.js v24.15.0 y pnpm 11 (use nvm para cambiar de versiones)
 - Docker (para MongoDB)
 
 ## Cómo correrlo
