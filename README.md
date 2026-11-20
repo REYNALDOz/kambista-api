@@ -1,6 +1,6 @@
-# Kambista FX API
+# Kambista  API
 
-API de cambio de dólares y soles con login JWT y roles. Hecha con **NestJS**, **TypeScript** y **MongoDB**, con arquitectura hexagonal (Clean Architecture).
+API de cambio de dólares y soles con login JWT y roles. Hecha con **NestJS**, **TypeScript** y **MongoDB**, con Clean Architecture.
 
 Cada 30 segundos la API trae el tipo de cambio de SUNAT y lo guarda. Un usuario se registra, inicia sesión, cambia dinero y ve su historial. Un admin puede ver el historial de cualquier usuario.
 
@@ -33,7 +33,7 @@ Documentación interactiva: **http://localhost:3000/docs** (con el botón *Autho
 
 ### Variables de entorno
 
-Copiá `.env.example`; ahí está todo explicado. Las principales:
+Copia `.env.example`; ahí está todo explicado. Las principales:
 
 | Variable | Obligatoria | Para qué sirve |
 | --- | --- | --- |
@@ -52,13 +52,7 @@ Si falta una variable obligatoria o es inválida, la API no arranca y dice cuál
 
 ### Cómo volver admin a un usuario
 
-El rol `admin` se asigna directo en la base:
-
-```bash
-docker exec -it kambista-mongo mongosh -u <MONGO_ROOT_USER> -p <MONGO_ROOT_PASSWORD> --authenticationDatabase admin
-> use kambista
-> db.users.updateOne({ email: "juan@example.com" }, { $set: { role: "admin" } })
-```
+El rol `admin` se asigna directo en la base: Entra a su db usando un cliente y modifica.
 
 Después, ese usuario tiene que **volver a iniciar sesión**: el rol viaja dentro del token.
 
@@ -74,17 +68,6 @@ Todas las rutas empiezan con `/v1`. Menos registro y login, todas piden `Authori
 | `POST` | `/transactions` | Crea un cambio con la última tasa |
 | `GET` | `/transactions/history` | `startDate`, `endDate`, `page`, `limit` y, solo admin, `userId` |
 
-```bash
-curl -X POST localhost:3000/v1/auth/register -H 'Content-Type: application/json' \
-  -d '{"nombre":"Juan Pérez","email":"juan@example.com","password":"contraseña123"}'
-
-curl -X POST localhost:3000/v1/transactions -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"monedaOrigen":"USD","monedaDestino":"PEN","monto":100}'
-```
-
-Los errores tienen nombre propio, por ejemplo `EmailAlreadyRegisteredError` (409), `InvalidCredentialsError` (401), `TooManyLoginAttemptsError` (429), `SameCurrencyError` (400) o `ExchangeRateNotAvailableError` (503, todavía no hay tasa guardada).
-
 ## Tests
 
 ```bash
@@ -92,9 +75,6 @@ pnpm test        # tests unitarios, no necesitan base de datos
 pnpm test:e2e    # registro -> login -> cambio -> historial; necesita MongoDB corriendo
 pnpm test:cov    # unitarios con cobertura
 ```
-
-Los E2E usan su propia base descartable (`kambista_e2e`, se borra al final) y una tasa fija: nunca tocan tus datos ni llaman a SUNAT.
-
 Otros scripts: `pnpm build`, `pnpm lint`, `pnpm format`.
 
 ## Estructura
@@ -132,12 +112,11 @@ test/                tests end-to-end
 - **El rol viaja en el token.** Si bajan a un admin, su token sigue valiendo hasta que venza; por eso dura poco.
 
 **Extras**
-- **Historial paginado.** `page` y `limit` (por defecto 50, máximo 100) van en la query. El body sigue siendo un arreglo simple, como pide el enunciado, y el total viaja en los headers `X-Total-Count`, `X-Page` y `X-Limit`.
-- **Caché del tipo de cambio.** Un decorador sobre el repositorio guarda la última tasa en memoria. Se actualiza cuando se guarda una nueva y vence por tiempo, así que una tasa guardada por otra instancia igual se detecta.
-- **Logs estructurados.** Login y transacciones escriben una línea JSON por petición (método, ruta, estado, duración y usuario) en la salida estándar, con el campo `severity` que entiende Google Cloud Logging. Docker, Dokploy y Cloud Run la recogen de ahí. Nunca se registran el body, la query ni los headers. Para otro endpoint: `@UseInterceptors(RequestLogInterceptor)`.
-- **El scheduler no tumba la API.** Si SUNAT falla, se registra y se sigue con la última tasa. Las consultas nunca se solapan.
+- **Historial paginado.** `page` y `limit`.
+- **Caché del tipo de cambio.**
+- **Logs estructurados.**
+- **El scheduler no tumba la API.**
 
 ## Pendiente
 
-- **Refresh tokens:** tokens de acceso cortos más un token de renovación que rota, guardado con hash.
-- **Limpieza del historial de tasas:** cada consulta guarda un documento (2.880 por día). Un índice TTL podría borrar los viejos.
+- **Refresh tokens:**
